@@ -77,22 +77,44 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
   const { students, currentRole, activityLogs, schoolProfile, rolePermissions, updateStudent, updateFotoIjazah, updateFotoIjazahMutasi } = useSchool();
   const [activeTab, setActiveTab] = useState<'profil' | 'keluarga' | 'kesehatan' | 'raport' | 'kelulusan' | 'riwayat'>('profil');
 
-  // Internal student pointer to allow smooth cyclic navigation
-  const [internalStudent, setInternalStudent] = useState<Student | null>(incomingStudent);
-
-  React.useEffect(() => {
-    if (incomingStudent) {
-      const targetId = internalStudent?.id || incomingStudent.id;
-      const latest = students.find(s => s.id === targetId);
-      setInternalStudent(latest || incomingStudent);
-    }
-  }, [incomingStudent, students]);
-
-  const student = internalStudent || incomingStudent;
-
   // Navigation scope: 'semua' (all students) or 'kelas' (current student's class only)
   const [navScope, setNavScope] = useState<'semua' | 'kelas'>('semua');
   const contentScrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Internal student pointer to allow smooth cyclic navigation
+  const [internalStudent, setInternalStudent] = useState<Student | null>(incomingStudent);
+
+  // Sync internalStudent immediately whenever incomingStudent or isOpen changes
+  React.useEffect(() => {
+    if (incomingStudent && isOpen) {
+      const fresh = students.find(s => s.id === incomingStudent.id) || incomingStudent;
+      setInternalStudent(fresh);
+      setActiveTab('profil');
+      contentScrollRef.current?.scrollTo({ top: 0 });
+    } else if (!isOpen) {
+      setInternalStudent(null);
+    }
+  }, [incomingStudent?.id, isOpen]);
+
+  // Keep internalStudent fresh if students array updates while modal is open (e.g. edits, photo updates)
+  React.useEffect(() => {
+    if (isOpen && internalStudent?.id) {
+      const latest = students.find(s => s.id === internalStudent.id);
+      if (latest && latest !== internalStudent) {
+        setInternalStudent(latest);
+      }
+    }
+  }, [students, isOpen, internalStudent?.id]);
+
+  // Current active student: prioritize incomingStudent if IDs differ, otherwise internalStudent
+  const student = React.useMemo(() => {
+    if (!incomingStudent) return internalStudent;
+    if (internalStudent && internalStudent.id === incomingStudent.id) {
+      return internalStudent;
+    }
+    const fresh = students.find(s => s.id === incomingStudent.id) || incomingStudent;
+    return fresh;
+  }, [incomingStudent, internalStudent, students]);
 
   // Active student list based on scope
   const activeStudentList = React.useMemo(() => {

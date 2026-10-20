@@ -418,9 +418,13 @@ const MainAppContent: React.FC = () => {
       />
 
       <StudentDetailModal
+        key={isDetailModalOpen ? (studentForDetail?.id || 'open') : 'closed'}
         student={studentForDetail}
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setStudentForDetail(null);
+        }}
         onEdit={handleOpenEditModal}
         onPrintBukuInduk={handleDirectPrintBukuInduk}
         onPrintKartuPelajar={handleDirectPrintKartuPelajar}
