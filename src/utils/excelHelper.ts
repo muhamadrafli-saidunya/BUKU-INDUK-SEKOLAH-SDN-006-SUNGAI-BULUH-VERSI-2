@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Student, Gender, Religion, StudentStatus } from '../types';
+import { Student, Gender, Religion, StudentStatus, SchoolProfile } from '../types';
 
 export interface ParsedRowResult {
   rowNumber: number;
@@ -1714,4 +1714,351 @@ export function parseRombelExcelFile(
     reader.readAsArrayBuffer(file);
   });
 }
+
+export interface ExportRombelExcelOptions {
+  schoolProfile: SchoolProfile;
+  students: Student[];
+  kelasName: string;
+  activeTP?: string;
+  activeSemester?: string;
+  waliKelasName?: string;
+  waliKelasNip?: string;
+}
+
+/**
+ * Mengunduh berkas daftar siswa resmi untuk rombel tertentu dalam format .xlsx
+ * Didesain khusus untuk kebutuhan administrasi & pengelolaan guru wali kelas.
+ */
+export function exportRombelToExcel(options: ExportRombelExcelOptions): void {
+  const {
+    schoolProfile,
+    students,
+    kelasName,
+    activeTP = schoolProfile.tahunPelajaranAktif || '2025/2026',
+    activeSemester = schoolProfile.semesterAktif || 'Ganjil',
+    waliKelasName = 'Wali Kelas',
+    waliKelasNip = '-',
+  } = options;
+
+  // Saring siswa khusus untuk rombel yang dipilih dan berstatus Aktif
+  const rombelStudents = students
+    .filter((s) => s.kelasSekarang === kelasName && s.status === 'Aktif')
+    .sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
+
+  const total = rombelStudents.length;
+  const jmlL = rombelStudents.filter((s) => s.jenisKelamin === 'L').length;
+  const jmlP = rombelStudents.filter((s) => s.jenisKelamin === 'P').length;
+
+  const wb = XLSX.utils.book_new();
+
+  // =========================================================================
+  // LEMBAR KERJA 1: DAFTAR SISWA KELAS & ADMINISTRASI WALI KELAS
+  // =========================================================================
+  const rows: any[][] = [];
+
+  // Kop dan Identitas
+  const instansi = (schoolProfile.kabupatenKota || 'KABUPATEN KUANTAN SINGINGI').toUpperCase();
+  rows.push([`DINAS PENDIDIKAN, KEPEMUDAAN DAN OLAHRAGA ${instansi}`]);
+  rows.push([`DAFTAR PESERTA DIDIK - ${schoolProfile.namaSekolah.toUpperCase()}`]);
+  rows.push([
+    `ROMBONGAN BELAJAR (ROMBEL): ${kelasName.toUpperCase()}   |   TAHUN PELAJARAN: ${activeTP}   |   SEMESTER: ${activeSemester.toUpperCase()}`,
+  ]);
+  rows.push([
+    `Guru / Wali Kelas: ${waliKelasName}   |   NIP: ${waliKelasNip}   |   Jumlah Siswa: ${total} Orang (L: ${jmlL}, P: ${jmlP})`,
+  ]);
+  rows.push([]); // Baris kosong
+
+  // Header Kolom Tabel
+  const tableHeaders = [
+    'No',
+    'NIS',
+    'NISN',
+    'NIK',
+    'Nama Lengkap Siswa',
+    'L/P',
+    'Tempat Lahir',
+    'Tanggal Lahir',
+    'Agama',
+    'Alamat Siswa',
+    'Dusun / RT / RW',
+    'Desa / Kelurahan',
+    'Nama Ayah',
+    'Pekerjaan Ayah',
+    'Nama Ibu',
+    'Pekerjaan Ibu',
+    'No. HP Orang Tua / Wali',
+    'Status',
+    'Presensi (S)',
+    'Presensi (I)',
+    'Presensi (A)',
+    'Catatan Wali Kelas',
+  ];
+  rows.push(tableHeaders);
+
+  // Baris Data Peserta Didik
+  rombelStudents.forEach((s, idx) => {
+    const parentPhone = s.ayah?.noHp || s.ibu?.noHp || s.wali?.noHp || s.noHpSiswa || '-';
+    const dusunRtRw = [s.dusun, s.rt ? `RT ${s.rt}` : '', s.rw ? `RW ${s.rw}` : '']
+      .filter(Boolean)
+      .join(', ') || '-';
+
+    rows.push([
+      idx + 1,
+      s.noInduk || '-',
+      s.nisn || '-',
+      s.nik || '-',
+      s.namaLengkap,
+      s.jenisKelamin,
+      s.tempatLahir || '-',
+      s.tanggalLahir || '-',
+      s.agama || '-',
+      s.alamat || '-',
+      dusunRtRw,
+      s.kelurahanDesa || '-',
+      s.ayah?.nama || '-',
+      s.ayah?.pekerjaan || '-',
+      s.ibu?.nama || '-',
+      s.ibu?.pekerjaan || '-',
+      parentPhone,
+      s.status,
+      '', // Kosong untuk absensi / nilai guru wali kelas
+      '',
+      '',
+      '',
+    ]);
+  });
+
+  // Footer Rekapitulasi
+  rows.push([]);
+  rows.push(['REKAPITULASI JUMLAH PESERTA DIDIK:']);
+  rows.push([`• Total Siswa       : ${total} Siswa`]);
+  rows.push([`• Siswa Laki-laki   : ${jmlL} Siswa (${total > 0 ? Math.round((jmlL / total) * 100) : 0}%)`]);
+  rows.push([`• Siswa Perempuan   : ${jmlP} Siswa (${total > 0 ? Math.round((jmlP / total) * 100) : 0}%)`]);
+  rows.push([]);
+
+  // Titimangsa & Pengesahan Dokumen
+  const kota = schoolProfile.kabupatenKota?.replace(/^(Kabupaten|Kota)\s+/i, '') || 'Sungai Buluh';
+  const tglFormatted = new Date().toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  rows.push(['', '', '', '', 'Mengetahui,', '', '', '', '', '', '', '', '', '', '', '', `${kota}, ${tglFormatted}`]);
+  rows.push(['', '', '', '', 'Kepala Sekolah,', '', '', '', '', '', '', '', '', '', '', '', `Wali Kelas ${kelasName},`]);
+  rows.push([]);
+  rows.push([]);
+  rows.push([]);
+  rows.push([
+    '', '', '', '',
+    schoolProfile.namaKepalaSekolah || 'Kepala Sekolah',
+    '', '', '', '', '', '', '', '', '', '', '',
+    waliKelasName,
+  ]);
+  rows.push([
+    '', '', '', '',
+    `NIP. ${schoolProfile.nipKepalaSekolah || '-'}`,
+    '', '', '', '', '', '', '', '', '', '', '',
+    `NIP. ${waliKelasNip}`,
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Lebar kolom rapi
+  ws['!cols'] = [
+    { wch: 6 },   // No
+    { wch: 14 },  // NIS
+    { wch: 14 },  // NISN
+    { wch: 18 },  // NIK
+    { wch: 34 },  // Nama
+    { wch: 6 },   // L/P
+    { wch: 18 },  // Tempat Lahir
+    { wch: 14 },  // Tgl Lahir
+    { wch: 12 },  // Agama
+    { wch: 32 },  // Alamat
+    { wch: 20 },  // Dusun/RT/RW
+    { wch: 18 },  // Kelurahan/Desa
+    { wch: 24 },  // Nama Ayah
+    { wch: 20 },  // Pekerjaan Ayah
+    { wch: 24 },  // Nama Ibu
+    { wch: 20 },  // Pekerjaan Ibu
+    { wch: 18 },  // No HP Ortu
+    { wch: 12 },  // Status
+    { wch: 14 },  // S
+    { wch: 14 },  // I
+    { wch: 14 },  // A
+    { wch: 28 },  // Catatan
+  ];
+
+  // Nama Sheet (maks 31 karakter)
+  const safeSheetName = `SISWA_${kelasName.replace(/[^a-zA-Z0-9]/g, '_')}`.slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+
+  // =========================================================================
+  // LEMBAR KERJA 2: RINGKASAN KONTAK & DATA ORANG TUA SISWA
+  // =========================================================================
+  const kontakRows: any[][] = [
+    [`BUKU KONTAK & DATA ORANG TUA / WALI PESERTA DIDIK - ${kelasName.toUpperCase()}`],
+    [`${schoolProfile.namaSekolah} | Tahun Pelajaran ${activeTP}`],
+    [],
+    ['No', 'Nama Siswa', 'JK', 'NIS', 'NISN', 'Nama Ayah', 'Nama Ibu', 'No. HP Kontak Utama', 'Alamat Domisili'],
+  ];
+
+  rombelStudents.forEach((s, idx) => {
+    const parentPhone = s.ayah?.noHp || s.ibu?.noHp || s.wali?.noHp || s.noHpSiswa || '-';
+    kontakRows.push([
+      idx + 1,
+      s.namaLengkap,
+      s.jenisKelamin,
+      s.noInduk,
+      s.nisn,
+      s.ayah?.nama || '-',
+      s.ibu?.nama || '-',
+      parentPhone,
+      s.alamat || '-',
+    ]);
+  });
+
+  const wsKontak = XLSX.utils.aoa_to_sheet(kontakRows);
+  wsKontak['!cols'] = [
+    { wch: 6 },
+    { wch: 32 },
+    { wch: 6 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 24 },
+    { wch: 24 },
+    { wch: 20 },
+    { wch: 36 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsKontak, 'BUKU_KONTAK_ORTU');
+
+  // Nama File
+  const cleanSchool = (schoolProfile.namaSekolah || 'SEKOLAH').replace(/[^a-zA-Z0-9]/g, '_');
+  const cleanClass = kelasName.replace(/[^a-zA-Z0-9]/g, '_');
+  const cleanTP = activeTP.replace(/[^a-zA-Z0-9]/g, '_');
+  const fileName = `DAFTAR_SISWA_${cleanClass}_${cleanSchool}_TP_${cleanTP}.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+}
+
+/**
+ * Mengunduh berkas workbook Excel yang menggabungkan seluruh rombel ke dalam masing-masing lembar kerja (sheet)
+ */
+export function exportCombinedRombelsToExcel(
+  schoolProfile: SchoolProfile,
+  activeStudents: Student[],
+  availableClasses: string[],
+  activeTP: string,
+  waliKelasMap: Record<string, { nama: string; nip?: string }> = {}
+): void {
+  const wb = XLSX.utils.book_new();
+
+  // 1. Sheet Ringkasan Semua Rombel
+  const summaryRows: any[][] = [
+    [`REKAPITULASI PESERTA DIDIK PER ROMBONGAN BELAJAR`],
+    [`${schoolProfile.namaSekolah} | TP ${activeTP}`],
+    [],
+    ['No', 'Rombongan Belajar (Kelas)', 'Nama Wali Kelas', 'NIP Wali Kelas', 'Laki-laki (L)', 'Perempuan (P)', 'Total Siswa'],
+  ];
+
+  let totalGrandL = 0;
+  let totalGrandP = 0;
+  let totalGrand = 0;
+
+  availableClasses.forEach((kelas, idx) => {
+    const classStudents = activeStudents.filter((s) => s.kelasSekarang === kelas && s.status === 'Aktif');
+    const jmlL = classStudents.filter((s) => s.jenisKelamin === 'L').length;
+    const jmlP = classStudents.filter((s) => s.jenisKelamin === 'P').length;
+    const total = classStudents.length;
+
+    totalGrandL += jmlL;
+    totalGrandP += jmlP;
+    totalGrand += total;
+
+    const wali = waliKelasMap[kelas] || { nama: `Wali Kelas ${kelas}`, nip: '-' };
+
+    summaryRows.push([idx + 1, kelas, wali.nama, wali.nip || '-', jmlL, jmlP, total]);
+  });
+
+  summaryRows.push([]);
+  summaryRows.push(['', 'TOTAL KESELURUHAN', '', '', totalGrandL, totalGrandP, totalGrand]);
+
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSummary['!cols'] = [
+    { wch: 6 },
+    { wch: 24 },
+    { wch: 28 },
+    { wch: 20 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'REKAP_SEMUA_ROMBEL');
+
+  // 2. Tambahkan sheet per rombel yang memiliki siswa
+  availableClasses.forEach((kelas) => {
+    const classStudents = activeStudents
+      .filter((s) => s.kelasSekarang === kelas && s.status === 'Aktif')
+      .sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
+
+    if (classStudents.length === 0) return;
+
+    const wali = waliKelasMap[kelas] || { nama: `Wali Kelas ${kelas}`, nip: '-' };
+    const classRows: any[][] = [
+      [`DAFTAR PESERTA DIDIK ${kelas.toUpperCase()} - ${schoolProfile.namaSekolah.toUpperCase()}`],
+      [`TP: ${activeTP} | Wali Kelas: ${wali.nama} (NIP: ${wali.nip || '-'}) | Total: ${classStudents.length} Siswa`],
+      [],
+      ['No', 'NIS', 'NISN', 'Nama Lengkap Siswa', 'L/P', 'Tempat Lahir', 'Tanggal Lahir', 'Nama Ayah', 'Nama Ibu', 'No. HP Ortu', 'Alamat', 'Presensi S', 'Presensi I', 'Presensi A'],
+    ];
+
+    classStudents.forEach((s, idx) => {
+      const parentPhone = s.ayah?.noHp || s.ibu?.noHp || s.wali?.noHp || '-';
+      classRows.push([
+        idx + 1,
+        s.noInduk || '-',
+        s.nisn || '-',
+        s.namaLengkap,
+        s.jenisKelamin,
+        s.tempatLahir || '-',
+        s.tanggalLahir || '-',
+        s.ayah?.nama || '-',
+        s.ibu?.nama || '-',
+        parentPhone,
+        s.alamat || '-',
+        '',
+        '',
+        '',
+      ]);
+    });
+
+    const wsClass = XLSX.utils.aoa_to_sheet(classRows);
+    wsClass['!cols'] = [
+      { wch: 6 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 32 },
+      { wch: 6 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+    ];
+
+    const safeSheetName = kelas.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, wsClass, safeSheetName);
+  });
+
+  const cleanSchool = (schoolProfile.namaSekolah || 'SEKOLAH').replace(/[^a-zA-Z0-9]/g, '_');
+  const cleanTP = activeTP.replace(/[^a-zA-Z0-9]/g, '_');
+  const fileName = `BUKU_ROMBEL_LENGKAP_${cleanSchool}_TP_${cleanTP}.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+}
+
 

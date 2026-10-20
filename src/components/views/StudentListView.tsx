@@ -29,7 +29,7 @@ import { Student, Gender, StudentStatus, Religion } from '../../types';
 import { cn, formatIndonesianDate } from '../../lib/utils';
 import { ActiveTab } from '../layout/Sidebar';
 import { ImportExcelModal } from '../modals/ImportExcelModal';
-import { downloadExcelTemplate } from '../../utils/excelHelper';
+import { downloadExcelTemplate, exportRombelToExcel } from '../../utils/excelHelper';
 import { KopSuratHeader } from '../layout/KopSuratHeader';
 
 interface StudentListViewProps {
@@ -60,6 +60,7 @@ export const StudentListView: React.FC<StudentListViewProps> = ({
   const { 
     students, 
     schoolProfile,
+    adminUsers,
     deleteStudent, 
     deleteStudentsBulk,
     deleteAllStudents,
@@ -290,6 +291,34 @@ export const StudentListView: React.FC<StudentListViewProps> = ({
                 </span>
                 <span className="md:hidden">Ekspor Excel</span>
               </button>
+
+              {/* Unduh Berkas Rombel Khusus Wali Kelas */}
+              {selectedClass !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const savedWali = schoolProfile.waliKelasMap?.[selectedClass];
+                    const teacherFromUsers = adminUsers?.find(u => u.tingkatKelas === selectedClass);
+                    const waliNama = savedWali?.nama || teacherFromUsers?.nama || `Wali Kelas ${selectedClass}`;
+                    const waliNip = savedWali?.nip || teacherFromUsers?.nip || '-';
+                    exportRombelToExcel({
+                      schoolProfile,
+                      students,
+                      kelasName: selectedClass,
+                      activeTP: schoolProfile.tahunPelajaranAktif || '2025/2026',
+                      activeSemester: schoolProfile.semesterAktif || 'Ganjil',
+                      waliKelasName: waliNama,
+                      waliKelasNip: waliNip,
+                    });
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  title={`Unduh daftar siswa ${selectedClass} format Excel (.xlsx) khusus administrasi guru wali kelas`}
+                >
+                  <Download className="w-4 h-4 text-teal-200" />
+                  <span className="hidden sm:inline">Format Wali Kelas ({selectedClass})</span>
+                  <span className="sm:hidden">Wali Kelas</span>
+                </button>
+              )}
 
               {/* Cetak Buku Register / Daftar Siswa */}
               <button
