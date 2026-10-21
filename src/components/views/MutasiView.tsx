@@ -4,6 +4,7 @@ import { useSchool } from '../../context/SchoolContext';
 import { Student } from '../../types';
 import { formatIndonesianDate, cn, isInAcademicYear, getAcademicYearFromDate } from '../../lib/utils';
 import { KopSuratHeader } from '../layout/KopSuratHeader';
+import { SuratPindahDocument } from '../common/SuratPindahDocument';
 
 interface MutasiViewProps {
   onOpenMutationModal: (student: Student) => void;
@@ -21,6 +22,7 @@ export const MutasiView: React.FC<MutasiViewProps> = ({
   const { students, schoolProfile, currentRole, cancelMutation, rolePermissions } = useSchool();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentForLetter, setSelectedStudentForLetter] = useState<Student | null>(null);
+  const [previewModalStudent, setPreviewModalStudent] = useState<Student | null>(null);
   const [isPrintingRekap, setIsPrintingRekap] = useState(false);
   const [studentToCancelMutation, setStudentToCancelMutation] = useState<Student | null>(null);
   const [restoreClass, setRestoreClass] = useState<string>('Kelas 1');
@@ -294,23 +296,40 @@ export const MutasiView: React.FC<MutasiViewProps> = ({
                     <td className="p-3 font-bold text-slate-700 dark:text-slate-300">
                       {student.mutasi?.dariKelas || student.kelasSekarang}
                     </td>
-                    <td className="p-3 font-bold text-blue-900 dark:text-blue-300">
-                      {student.mutasi?.sekolahTujuan || '-'}
+                    <td className="p-3">
+                      <div className="font-bold text-blue-900 dark:text-blue-300">
+                        {student.mutasi?.sekolahTujuan || '-'}
+                      </div>
+                      {(student.mutasi?.kabupatenKotaTujuan || student.mutasi?.provinsiTujuan) && (
+                        <div className="text-[10px] text-slate-500 font-medium">
+                          {[student.mutasi.kecamatanTujuan, student.mutasi.kabupatenKotaTujuan, student.mutasi.provinsiTujuan].filter(Boolean).join(', ')}
+                        </div>
+                      )}
                     </td>
                     <td className="p-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">
                       {student.mutasi?.alasanPindah || '-'}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {/* Tombol Pratinjau Surat */}
+                        <button
+                          onClick={() => setPreviewModalStudent(student)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                          title="Lihat Pratinjau Surat Keterangan Pindah Sekolah"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Pratinjau</span>
+                        </button>
+
                         {/* Tombol Edit Mutasi */}
                         {canManageMutation && (
                           <button
                             onClick={() => onOpenMutationModal(student)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
                             title="Edit data dan catatan mutasi siswa"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
-                            <span>Edit Mutasi</span>
+                            <span>Edit</span>
                           </button>
                         )}
 
@@ -443,76 +462,98 @@ export const MutasiView: React.FC<MutasiViewProps> = ({
         </div>
       )}
 
-      {/* FORMAL SURAT KETERANGAN PINDAH SEKOLAH (Printed when Cetak Surat clicked) */}
-      {selectedStudentForLetter && !isPrintingRekap && (
-        <div className="max-w-[210mm] mx-auto bg-white text-slate-950 p-[15mm] shadow-2xl rounded-sm font-serif text-[12px] leading-relaxed border border-slate-300 print:border-none print:shadow-none print:m-0 print:w-full">
-          {/* Kop Surat Resmi dengan Logo Kiri & Logo Kanan */}
-          <KopSuratHeader
-            schoolProfile={schoolProfile}
-            documentTitle="SURAT KETERANGAN PINDAH SEKOLAH"
-            documentSubtitle={`Nomor: ${selectedStudentForLetter.mutasi?.noSuratPindah || `421.2/SDN-006/KP/${new Date().getFullYear()}/042`}`}
-          />
-
-          <p className="indent-8 text-justify mb-4">
-            Yang bertanda tangan di bawah ini Kepala {schoolProfile.namaSekolah}, Kecamatan {schoolProfile.kecamatan}, Kabupaten {schoolProfile.kabupatenKota}, Provinsi {schoolProfile.provinsi}, menerangkan bahwa:
-          </p>
-
-          <table className="w-full border-collapse text-[12px] ml-4 mb-4">
-            <tbody>
-              <tr><td className="w-48 py-1">Nama Lengkap</td><td className="w-3">:</td><td className="font-bold uppercase">{selectedStudentForLetter.namaLengkap}</td></tr>
-              <tr><td className="py-1">Nomor Induk Siswa (NIS)</td><td>:</td><td className="font-mono font-bold">{selectedStudentForLetter.noInduk}</td></tr>
-              <tr><td className="py-1">NISN</td><td>:</td><td className="font-mono font-bold">{selectedStudentForLetter.nisn}</td></tr>
-              <tr><td className="py-1">Jenis Kelamin</td><td>:</td><td>{selectedStudentForLetter.jenisKelamin === 'L' ? 'Laki-Laki' : 'Perempuan'}</td></tr>
-              <tr><td className="py-1">Tempat, Tanggal Lahir</td><td>:</td><td>{selectedStudentForLetter.tempatLahir}, {formatIndonesianDate(selectedStudentForLetter.tanggalLahir)}</td></tr>
-              <tr><td className="py-1">Tingkat Kelas Terakhir</td><td>:</td><td className="font-bold">{selectedStudentForLetter.mutasi?.dariKelas || selectedStudentForLetter.kelasSekarang}</td></tr>
-              <tr><td className="py-1">Nama Orang Tua / Wali</td><td>:</td><td>{selectedStudentForLetter.ayah.nama}</td></tr>
-              <tr><td className="py-1">Alamat Asal</td><td>:</td><td>{selectedStudentForLetter.alamat}, Desa {selectedStudentForLetter.kelurahanDesa}</td></tr>
-            </tbody>
-          </table>
-
-          <p className="indent-8 text-justify mb-2">
-            Sesuai surat permohonan pindah sekolah dari orang tua/wali siswa tertanggal {formatIndonesianDate(selectedStudentForLetter.mutasi?.tglMeninggalkan || new Date().toISOString())}, bahwa peserta didik tersebut di atas mengajukan permohonan pindah sekolah ke:
-          </p>
-
-          <table className="w-full border-collapse text-[12px] ml-4 mb-4">
-            <tbody>
-              <tr><td className="w-48 py-1">Nama Sekolah Tujuan</td><td className="w-3">:</td><td className="font-bold">{selectedStudentForLetter.mutasi?.sekolahTujuan}</td></tr>
-              <tr><td className="py-1">Alasan Pindah</td><td>:</td><td>{selectedStudentForLetter.mutasi?.alasanPindah}</td></tr>
-            </tbody>
-          </table>
-
-          <p className="indent-8 text-justify mb-8">
-            Demikian Surat Keterangan Pindah Sekolah ini kami terbitkan dengan sebenarnya untuk dapat dipergunakan sebagaimana mestinya. Buku Induk dan Raport siswa telah disesuaikan.
-          </p>
-
-          <div className="flex justify-between items-end font-sans text-[11px]">
-            <div className="text-center">
-              <div>Mengetahui Orang Tua / Wali,</div>
-              <div className="h-16" />
-              <div className="font-bold underline">{selectedStudentForLetter.ayah.nama}</div>
+      {/* MODAL PRATINJAU SURAT KETERANGAN PINDAH SEKOLAH */}
+      {previewModalStudent && (
+        <div className="no-print fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/75 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
+            {/* Header Modal Pratinjau */}
+            <div className="flex items-center justify-between px-5 py-3.5 bg-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-5 h-5 text-orange-400" />
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wide">
+                    Pratinjau Surat Keterangan Pindah Sekolah
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Siswa: {previewModalStudent.namaLengkap} (NIS: {previewModalStudent.noInduk}) • Sesuai Berkas PDF Resmi
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const st = previewModalStudent;
+                    setPreviewModalStudent(null);
+                    handlePrintLetter(st);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak Surat (PDF)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalStudent(null)}
+                  className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="text-right leading-tight">
-              <div>{schoolProfile.desaKelurahan || schoolProfile.desa || 'Sungai Buluh'}, {formatIndonesianDate(selectedStudentForLetter.mutasi?.tglMeninggalkan || new Date().toISOString())}</div>
-              <div className="font-bold mt-0.5">Kepala {schoolProfile.namaSekolah}</div>
-              <div className="h-16 flex items-center justify-end relative">
-                {schoolProfile.stempelUrl ? (
-                  <img
-                    src={schoolProfile.stempelUrl}
-                    alt="Stempel Sekolah"
-                    className="w-24 h-16 object-contain opacity-85 absolute right-4"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-24 h-10 border border-blue-900/30 rounded flex items-center justify-center text-[8px] text-blue-900 font-bold">
-                    [ STEMPEL RESMI ]
-                  </div>
-                )}
+            {/* Document Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 dark:bg-slate-950 flex justify-center">
+              <div className="shadow-xl border border-slate-300 rounded-sm w-full max-w-[210mm] bg-white">
+                <SuratPindahDocument
+                  student={previewModalStudent}
+                  schoolProfile={schoolProfile}
+                />
               </div>
-              <div className="font-bold underline relative z-10">{schoolProfile.namaKepalaSekolah}</div>
-              <div>NIP. {schoolProfile.nipKepalaSekolah}</div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="px-5 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <span className="text-xs text-slate-500">
+                Format surat resmi dilengkapi lembar isian pengembalian untuk sekolah penerima.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const st = previewModalStudent;
+                    setPreviewModalStudent(null);
+                    onOpenMutationModal(st);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 cursor-pointer"
+                >
+                  Edit Data Formulir Surat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const st = previewModalStudent;
+                    setPreviewModalStudent(null);
+                    handlePrintLetter(st);
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak Dokumen Sekarang</span>
+                </button>
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* FORMAL SURAT KETERANGAN PINDAH SEKOLAH (Printed when Cetak Surat clicked) */}
+      {selectedStudentForLetter && !isPrintingRekap && (
+        <div className="max-w-[210mm] mx-auto bg-white text-black shadow-2xl rounded-sm border border-slate-300 print:border-none print:shadow-none print:m-0 print:w-full">
+          <SuratPindahDocument
+            student={selectedStudentForLetter}
+            schoolProfile={schoolProfile}
+          />
         </div>
       )}
 

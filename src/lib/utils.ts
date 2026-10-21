@@ -107,3 +107,27 @@ export function isInAcademicYear(dateOrYear?: string, targetAcademicYear?: strin
   return false;
 }
 
+/**
+ * Konversi bulan menjadi angka Romawi (contoh: bulan 10 -> X, bulan 1 -> I)
+ */
+export function getRomanMonth(monthIndexOrDate?: number | Date | string): string {
+  const romanMonths = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  if (monthIndexOrDate === undefined || monthIndexOrDate === null || monthIndexOrDate === '') {
+    return romanMonths[new Date().getMonth()];
+  }
+  if (typeof monthIndexOrDate === 'number') {
+    if (monthIndexOrDate >= 1 && monthIndexOrDate <= 12) return romanMonths[monthIndexOrDate - 1];
+    return romanMonths[monthIndexOrDate] || 'I';
+  }
+  if (monthIndexOrDate instanceof Date) {
+    return romanMonths[monthIndexOrDate.getMonth()];
+  }
+  if (typeof monthIndexOrDate === 'string') {
+    const d = new Date(monthIndexOrDate);
+    if (!isNaN(d.getTime())) return romanMonths[d.getMonth()];
+    // if string is single or double digit month '10'
+    const parsed = parseInt(monthIndexOrDate, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) return romanMonths[parsed - 1];
+  }
+  return romanMonths[new Date().getMonth()] || 'X';
+}

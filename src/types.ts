@@ -48,9 +48,25 @@ export interface MutationRecord {
   tglMeninggalkan?: string;
   dariKelas?: string;
   sekolahTujuan?: string;
+  desaKelurahanTujuan?: string; // Desa/Kelurahan Sekolah Tujuan
+  kecamatanTujuan?: string; // Kecamatan Sekolah Tujuan
+  kabupatenKotaTujuan?: string; // Kabupaten/Kota Sekolah Tujuan
+  provinsiTujuan?: string; // Provinsi Sekolah Tujuan
   alasanPindah?: string;
   noSuratPindah?: string;
   dikeluarkanTanggal?: string;
+  tempatSurat?: string; // Contoh: "Sungai Buluh"
+
+  // Data Permintaan Pindah oleh Orang Tua / Wali
+  namaPemohon?: string; // Nama Orang Tua / Wali murid pemohon pindah
+  pekerjaanPemohon?: string; // Pekerjaan orang tua / wali murid
+  hubunganPemohon?: string; // Ayah / Ibu / Wali
+
+  // Data Penandatangan Surat
+  namaKepalaSekolah?: string;
+  nipKepalaSekolah?: string;
+  jabatanPenandatangan?: string;
+
   tahunAjaran?: string; // Tahun Pelajaran saat mutasi (contoh: "2025/2026")
   keterangan?: string;
   fotoIjazah?: string; // URL / Base64 image of the Ijazah / Surat Pindah / Mutasi document

@@ -1235,11 +1235,21 @@ export const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 {student.mutasi ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div><span className="text-slate-500">Tanggal Mutasi:</span> <strong className="text-slate-800 dark:text-slate-100">{formatIndonesianDate(student.mutasi.tglMeninggalkan)}</strong></div>
-                      <div><span className="text-slate-500">Dari Kelas:</span> <span className="font-semibold">{student.mutasi.dariKelas}</span></div>
-                      <div><span className="text-slate-500">Sekolah Tujuan:</span> <strong className="text-blue-700 dark:text-blue-300">{student.mutasi.sekolahTujuan}</strong></div>
+                      <div><span className="text-slate-500">Tanggal Surat:</span> <strong className="text-slate-800 dark:text-slate-100">{formatIndonesianDate(student.mutasi.tglMeninggalkan)}</strong></div>
+                      <div><span className="text-slate-500">Tingkat / Dari Kelas:</span> <span className="font-semibold">{student.mutasi.dariKelas}</span></div>
+                      <div>
+                        <span className="text-slate-500">Sekolah Tujuan:</span> <strong className="text-blue-700 dark:text-blue-300">{student.mutasi.sekolahTujuan}</strong>
+                        {(student.mutasi.desaKelurahanTujuan || student.mutasi.kabupatenKotaTujuan) && (
+                          <div className="text-[11px] text-slate-500">
+                            {[student.mutasi.desaKelurahanTujuan, student.mutasi.kecamatanTujuan, student.mutasi.kabupatenKotaTujuan, student.mutasi.provinsiTujuan].filter(Boolean).join(', ')}
+                          </div>
+                        )}
+                      </div>
                       <div><span className="text-slate-500">Nomor Surat Pindah:</span> <span className="font-mono text-slate-700 dark:text-slate-300">{student.mutasi.noSuratPindah}</span></div>
-                      <div className="sm:col-span-2"><span className="text-slate-500">Alasan Pindah:</span> <span className="text-slate-800 dark:text-slate-200">{student.mutasi.alasanPindah}</span></div>
+                      {student.mutasi.namaPemohon && (
+                        <div><span className="text-slate-500">Pemohon (Orang Tua/Wali):</span> <span className="font-bold text-slate-800 dark:text-slate-200">{student.mutasi.namaPemohon} ({student.mutasi.pekerjaanPemohon || '-'})</span></div>
+                      )}
+                      <div className={student.mutasi.namaPemohon ? '' : 'sm:col-span-2'}><span className="text-slate-500">Dengan Alasan:</span> <span className="text-slate-800 dark:text-slate-200 font-medium">{student.mutasi.alasanPindah}</span></div>
                     </div>
 
                     {/* Lampiran Scan Ijazah / Dokumen Mutasi */}
