@@ -287,9 +287,9 @@ export const SuratPindahDocument: React.FC<SuratPindahDocumentProps> = ({
           Setelah anak tersebut di terima, mohon isian dibawah ini dikembalikan
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-end gap-4 pt-1">
           {/* Form Isian Balasan */}
-          <div className="sm:col-span-8">
+          <div className="flex-1 min-w-0 w-full sm:w-auto">
             <table className="border-collapse w-full text-[9pt]">
               <tbody>
                 <tr>
@@ -341,10 +341,10 @@ export const SuratPindahDocument: React.FC<SuratPindahDocumentProps> = ({
             </table>
           </div>
 
-          {/* Tanda Tangan Sekolah Penerima */}
-          <div className="sm:col-span-4 flex flex-col justify-end text-center pt-2 sm:pt-0">
-            <div className="text-[9.5pt] font-medium">Kepala Sekolah</div>
-            <div className="h-16" />
+          {/* Tanda Tangan Sekolah Penerima (Diturunkan ke bawah dan lurus sejajar dengan penandatanganan di atas) */}
+          <div className="w-64 text-center shrink-0 flex flex-col justify-end pt-10 sm:pt-12 pb-0.5">
+            <div className="text-[10pt] font-medium">Kepala Sekolah</div>
+            <div className="h-20" />
             <div className="border-b border-dotted border-black w-4/5 mx-auto" />
           </div>
         </div>
